@@ -1,4 +1,4 @@
-# Build stage - this is where the JAR is created
+# Build stage
 FROM maven:3.8.4-eclipse-temurin-17 AS builder
 
 WORKDIR /app
@@ -7,11 +7,13 @@ WORKDIR /app
 COPY pom.xml .
 RUN mvn dependency:go-offline -B
 
-# Copy source code and build
+# Copy source code
 COPY src src
+
+# Build the application
 RUN mvn clean package -DskipTests
 
-# Run stage - this is where the app runs
+# Run stage
 FROM eclipse-temurin:17-jre-alpine
 
 # Install curl for health checks
@@ -19,8 +21,8 @@ RUN apk add --no-cache curl
 
 WORKDIR /app
 
-# Copy the built jar from builder stage
-COPY --from=builder /app/target/crop-tracker.jar app.jar
+# Copy the built jar from builder stage - NOTE: Use the correct JAR name
+COPY --from=builder /app/target/CropTracker-0.0.1-SNAPSHOT.jar app.jar
 
 # Create logs directory
 RUN mkdir -p logs
