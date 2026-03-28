@@ -1,17 +1,29 @@
-# Use Eclipse Temurin (official OpenJDK replacement)
-FROM eclipse-temurin:17-jdk-alpine
+# Build stage - this is where the JAR is created
+FROM maven:3.8.4-eclipse-temurin-17 AS builder
+
+WORKDIR /app
+
+# Copy pom.xml and download dependencies
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# Copy source code and build
+COPY src src
+RUN mvn clean package -DskipTests
+
+# Run stage - this is where the app runs
+FROM eclipse-temurin:17-jre-alpine
 
 # Install curl for health checks
 RUN apk add --no-cache curl
 
-# Create app directory
 WORKDIR /app
 
-# Copy the JAR file
-COPY target/crop-tracker.jar app.jar
+# Copy the built jar from builder stage
+COPY --from=builder /app/target/crop-tracker.jar app.jar
 
 # Create logs directory
-RUN mkdir -p /app/logs
+RUN mkdir -p logs
 
 # Expose port
 EXPOSE 8080
@@ -21,4 +33,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:8080/health || exit 1
 
 # Run the application
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
